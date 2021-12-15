@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 import twitterLogo from './assets/twitter-logo.svg';
 import { Flex, Button } from '@chakra-ui/react';
+import CandyMachine from './CandyMachine';
 
 // Constants
 const TWITTER_HANDLE = 'Sopproo';
@@ -73,6 +74,9 @@ const App = () => {
           <p className="sub-text">NFT drop machine with fair mint</p>
           {!walletAddress && renderNotConnectedContainer()}
         </div>
+        {walletAddress && (
+          <CandyMachine walletAddress={window.solana}></CandyMachine>
+        )}
         <div className="footer-container">
           <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />
           <a

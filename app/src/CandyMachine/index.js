@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { Program, Provider, web3 } from '@project-serum/anchor';
 import { MintLayout, TOKEN_PROGRAM_ID, Token } from '@solana/spl-token';
@@ -25,6 +25,10 @@ const MAX_SYMBOL_LENGTH = 10;
 const MAX_CREATOR_LEN = 32 + 1 + 1;
 
 const CandyMachine = ({ walletAddress }) => {
+  // Candy machine state
+  const [machineStats, setMachineStats] = useState(null);
+  //
+  const [mints, setMints] = useState([]);
   // Actions
   const fetchHashTable = async (hash, metadataEnabled) => {
     const connection = new web3.Connection(
@@ -188,7 +192,7 @@ const CandyMachine = ({ walletAddress }) => {
         txn,
         async (notification, context) => {
           if (notification.type === 'status') {
-            console.log('Receievd status event');
+            console.log('Received status event');
 
             const { result } = notification;
             if (!result.err) {
@@ -250,14 +254,69 @@ const CandyMachine = ({ walletAddress }) => {
     });
   };
 
+  /* 
+  Connects web app to Solana blockchain, supplying connection and credentials
+  to interact with Solana programs
+  */
+  const getProvider = () => {
+    const rpcHost = process.env.REACT_APP_SOLANA_RPC_HOST;
+    const connection = new Connection(rpcHost);
+    const provider = new Provider(
+      connection,
+      window.solana,
+      opts.preflightCommitment
+    );
+
+    return provider;
+  };
+
+  const getCandyMachineState = async () => {
+    const provider = getProvider();
+    // Get metadata about candy machine
+    const idl = await Program.fetchIdl(candyMachineProgram, provider);
+    const program = new Program(idl, candyMachineProgram, provider); // Create callable program
+    const candyMachine = await program.account.candyMachine.fetch(
+      process.env.REACT_APP_CANDY_MACHINE_ID
+    );
+
+    // (This data is being requested from the devnet chain)
+    const itemsAvailable = candyMachine.data.itemsAvailable.toNumber();
+    const itemsRedeemed = candyMachine.itemsRedeemed.toNumber();
+    const itemsRemaining = itemsAvailable - itemsRedeemed;
+    const goLiveDate = candyMachine.data.goLiveDate.toNumber();
+    const goLiveTimestamp = `${new Date(goLiveDate * 1000).toLocaleString()}`;
+
+    setMachineStats({
+      itemsAvailable,
+      itemsRedeemed,
+      itemsRemaining,
+      goLiveDate,
+      goLiveTimestamp,
+    });
+
+    console.log({
+      itemsAvailable,
+      itemsRedeemed,
+      itemsRemaining,
+      goLiveDate,
+      goLiveTimestamp,
+    });
+  };
+
+  useEffect(() => {
+    getCandyMachineState();
+  }, []);
+
   return (
-    <div className="machine-container">
-      <p>Drop Date:</p>
-      <p>Items Minted:</p>
-      <button className="cta-button mint-button" onClick={mintToken}>
-        Mint NFT
-      </button>
-    </div>
+    machineStats && (
+      <div className="machine-container">
+        <p>{`Drop Date: ${machineStats.goLiveTimestamp}`}</p>
+        <p>{`Items Minted: ${machineStats.itemsRedeemed} / ${machineStats.itemsAvailable}`}</p>
+        <button className="cta-button mint-button" onClick={mintToken}>
+          Mint NFT
+        </button>
+      </div>
+    )
   );
 };
 

@@ -9,6 +9,9 @@ import {
   TOKEN_METADATA_PROGRAM_ID,
   SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
 } from './helpers';
+import { Flex, Spinner, Heading } from '@chakra-ui/react';
+import CountdownTimer from '../CountdownTimer';
+
 const {
   metadata: { Metadata, MetadataProgram },
 } = programs;
@@ -29,6 +32,9 @@ const CandyMachine = ({ walletAddress }) => {
   const [machineStats, setMachineStats] = useState(null);
   // Minted NFT metadata
   const [mints, setMints] = useState([]);
+  // UX indicators
+  const [isMinting, setIsMinting] = useState(false);
+  const [isLoadingMints, setIsLoadingMints] = useState(false);
 
   // Get all accounts with minted NFTs and return token URIs
   // that point to NFT metadata
@@ -115,6 +121,7 @@ const CandyMachine = ({ walletAddress }) => {
 
   const mintToken = async () => {
     try {
+      setIsMinting(true);
       const mint = web3.Keypair.generate();
       const token = await getTokenWallet(
         walletAddress.publicKey,
@@ -199,6 +206,8 @@ const CandyMachine = ({ walletAddress }) => {
             const { result } = notification;
             if (!result.err) {
               console.log('NFT Minted!');
+              setIsMinting(false);
+              await getCandyMachineState();
             }
           }
         },
@@ -206,6 +215,8 @@ const CandyMachine = ({ walletAddress }) => {
       );
     } catch (error) {
       let message = error.msg || 'Minting failed! Please try again!';
+
+      setIsMinting(false);
 
       if (!error.msg) {
         if (error.message.indexOf('0x138')) {
@@ -305,6 +316,7 @@ const CandyMachine = ({ walletAddress }) => {
     });
 
     // Get NFT metadata URIs
+    setIsLoadingMints(true);
     const data = await fetchHashTable(
       process.env.REACT_APP_CANDY_MACHINE_ID,
       true
@@ -324,11 +336,15 @@ const CandyMachine = ({ walletAddress }) => {
         }
       }
     }
+
+    setIsLoadingMints(false);
   };
 
   const renderMintedItems = () => (
     <div className="gif-container">
-      <p className="sub-text">Minted Items ✨</p>
+      <Heading className="sub-text" size="xl">
+        ✨ Minted Items ✨
+      </Heading>
       <div className="gif-grid">
         {mints.map((mint) => (
           <div className="gif-item" key={mint}>
@@ -339,20 +355,48 @@ const CandyMachine = ({ walletAddress }) => {
     </div>
   );
 
+  const renderDropTimer = () => {
+    const now = new Date();
+    const dropDate = new Date(machineStats.goLiveDate * 1000);
+
+    if (now < dropDate) {
+      return <CountdownTimer dropDate={dropDate} />;
+    } else {
+      return <p>{`Drop Date: ${machineStats.goLiveTimestamp}`}</p>;
+    }
+  };
+
   useEffect(() => {
     getCandyMachineState();
   }, []);
 
   return (
     machineStats && (
-      <div className="machine-container">
-        <p>{`Drop Date: ${machineStats.goLiveTimestamp}`}</p>
+      <Flex
+        className="machine-container"
+        flexDirection="column"
+        alignItems="center"
+      >
+        {renderDropTimer()}
         <p>{`Items Minted: ${machineStats.itemsRedeemed} / ${machineStats.itemsAvailable}`}</p>
-        <button className="cta-button mint-button" onClick={mintToken}>
-          Mint NFT
-        </button>
-        {mints.length > 0 && renderMintedItems()}
-      </div>
+        {machineStats.itemsRedeemed === machineStats.itemsAvailable ? (
+          <Heading className="sub-text" size="md">
+            Sold Out 🙊
+          </Heading>
+        ) : (
+          <button
+            className="cta-button mint-button"
+            onClick={mintToken}
+            disabled={isMinting}
+          >
+            Mint NFT
+          </button>
+        )}
+        <Flex p={4} flexDirection="column" alignItems="center">
+          {isLoadingMints && <Spinner size="xl" />}
+          {mints.length > 0 && renderMintedItems()}
+        </Flex>
+      </Flex>
     )
   );
 };

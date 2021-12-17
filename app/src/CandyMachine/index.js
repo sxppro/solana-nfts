@@ -9,7 +9,7 @@ import {
   TOKEN_METADATA_PROGRAM_ID,
   SPL_ASSOCIATED_TOKEN_ACCOUNT_PROGRAM_ID,
 } from './helpers';
-import { Flex, Spinner, Heading } from '@chakra-ui/react';
+import { Flex, Spinner, Heading, Button } from '@chakra-ui/react';
 import CountdownTimer from '../CountdownTimer';
 
 const {
@@ -368,6 +368,7 @@ const CandyMachine = ({ walletAddress }) => {
 
   useEffect(() => {
     getCandyMachineState();
+    // eslint-disable-next-line
   }, []);
 
   return (
@@ -384,13 +385,15 @@ const CandyMachine = ({ walletAddress }) => {
             Sold Out 🙊
           </Heading>
         ) : (
-          <button
+          <Button
             className="cta-button mint-button"
             onClick={mintToken}
             disabled={isMinting}
+            isLoading={isMinting ? true : false}
+            loadingText="Minting"
           >
             Mint NFT
-          </button>
+          </Button>
         )}
         <Flex p={4} flexDirection="column" alignItems="center">
           {isLoadingMints && <Spinner size="xl" />}

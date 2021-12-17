@@ -55,7 +55,7 @@ const App = () => {
     );
   };
 
-  /*
+  /**
    * Check for wallet when component mounts
    */
   useEffect(() => {
